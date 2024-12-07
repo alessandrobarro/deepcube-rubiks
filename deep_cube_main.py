@@ -172,7 +172,7 @@ if __name__ == "__main__":
     hidden_size = 1000 #1000
     num_residual_blocks = 4
     num_epochs = 300
-    batch_size = 2000 #10000
+    batch_size = 5000 #10000
     max_initial_scramble = 1
     max_final_scramble = 10 #30
 
