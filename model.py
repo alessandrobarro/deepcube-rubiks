@@ -1,35 +1,38 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 
 class ResidualBlock(nn.Module):
-    def __init__(self, hidden_size):
+    def __init__(self, size):
         super(ResidualBlock, self).__init__()
-        self.fc1 = nn.Linear(hidden_size, hidden_size)
-        self.fc2 = nn.Linear(hidden_size, hidden_size)
+        self.block = nn.Sequential(
+            nn.Linear(size, size),
+            nn.ReLU(),
+            nn.Linear(size, size)
+        )
+        self.activation = nn.ReLU()
 
     def forward(self, x):
-        identity = x
-        out = F.relu(self.fc1(x))
-        out = self.fc2(out)
-        return F.relu(out + identity)
+        return self.activation(x + self.block(x))
 
-class DeepCubeA(nn.Module):
-    def __init__(self, input_size=48, hidden1=2000, hidden2=400, residual_blocks=2): #5000 1000
-        super(DeepCubeA, self).__init__()
-        self.fc1 = nn.Linear(input_size, hidden1)
-        self.fc2 = nn.Linear(hidden1, hidden2)
-        self.residual_blocks = nn.ModuleList([ResidualBlock(hidden2) for _ in range(residual_blocks)])
-        self.output = nn.Linear(hidden2, 1)
+class CostToGoNet(nn.Module):
+    def __init__(self, input_size=48, hidden_size_1=1000, hidden_size_2=100, num_residual_blocks=2):
+        super(CostToGoNet, self).__init__()
+        self.initial_layers = nn.Sequential(
+            nn.Linear(input_size, hidden_size_1),
+            nn.ReLU(),
+            nn.Linear(hidden_size_1, hidden_size_2),
+            nn.ReLU()
+        )
+        self.projection = nn.Linear(hidden_size_2, hidden_size_2)
+
+        self.residual_blocks = nn.Sequential(
+            *[ResidualBlock(hidden_size_2) for _ in range(num_residual_blocks)]
+        )
+
+        self.output_layer = nn.Linear(hidden_size_2, 1)
 
     def forward(self, x):
-        x = F.relu(self.fc1(x))
-        x = F.relu(self.fc2(x))
-        for block in self.residual_blocks:
-            x = block(x)
-        return self.output(x)
-
-# Funzione di utilità per inizializzare il modello
-def initialize_model():
-    model = DeepCubeA()
-    return model
+        x = self.initial_layers(x)
+        x = self.projection(x)
+        x = self.residual_blocks(x)
+        return self.output_layer(x)
